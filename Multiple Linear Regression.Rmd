@@ -1,0 +1,223 @@
+---
+title: "PES University, Bangalore"
+subtitle: "Established under Karnataka Act No. 16 of 2013"
+author:
+- 'SRUSHTI S N, Dept. of CSE - PES2UG20CS352'
+output: pdf_document
+urlcolor: blue
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## Worksheet 2b : Multiple Linear Regression
+
+### Loading the dataset
+
+```{r}
+library(tidyverse)
+library(corrplot)
+library(olsrr)
+library(car)
+df<-read.csv("spotify.csv")
+```
+
+### Problem 1
+
+Check for missing values in the dataset and normalize the dataset.
+
+```{r}
+#Problem 1
+
+summary(df)
+print(sum(is.na(df)))
+
+```
+
+From the above results we see that there are no missing values in the
+given dataset.
+
+### Problem 2
+
+Fit a linear model to predict the energy rating using all other
+attributes.Get the summary of the model and
+explain the results in detail.
+
+```{r}
+#Problem 2
+
+#Model = y = x1 + x2 + x3 
+model1 = lm( energy ~., data=df)
+
+#Summaries
+summary(model1)
+```
+
+We know that closer the R squared value of the model is to 1, better the
+fit. We see that the R squared valued for model1 is 0.844 which is a
+good number since it is pretty close to 1.
+
+As for the adjusted R squared value, we need more than one model to make
+conlusions.
+
+Value of p is less than 0.05, thus it is statistically significant(we
+reject null hypothesis)
+
+Higher the value of f-statistic indicates higher the dispersion since it
+is the ratio of two variances.
+
+### 
+Problem 3
+
+With the help of a correlogram and scatter plots, choose the features
+you think are important and model an MLR. Justify your choice and
+explain the new findings.
+
+```{r}
+#Correlogram
+M<-cor(df)
+head(round(M,2))
+corrplot(M, method="color")
+
+#scatterplot
+plot(x = df$loudness, y = df$energy)
+plot(x = df$acousticness, y = df$energy)
+
+plot(x = df$valence, y = df$energy)
+plot(x = df$tempo, y = df$energy)
+
+#making a model
+
+#cat("Before adding Valence and Tempo")
+#oldmodel2 = lm( energy ~loudness+acousticness, data=df)
+#summary(oldmodel2)
+
+#After adding Valence and Tempo
+#cat("After adding Valence and Tempo")
+#old2model2 = lm( energy ~loudness+acousticness+tempo+valence, data=df)
+#summary(old2model2)
+
+#After adding only Tempo
+cat("After adding Tempo")
+model2 = lm( energy ~loudness+acousticness+tempo, data=df)
+summary(model2)
+```
+
+From the correlogram we see that Loudness and Acousticness are highly
+correlated to Energy, while valence and tempo have correlation value of
+above 0.2 but not high enough.
+
+We also see from the scatterplot that tempo and valence aren't
+correlated well with Energy. HOWEVER, on finding the summary of model2
+with and without the two column it was observed that the value of R
+squared and Adjusted R squared increased by a little, which meant that
+the two features affected the model's fit and hence I decided to include
+Valence and Tempo in model2.
+
+BUT, on adding Valence the value of Adjusted R squared decreased. Hence
+i finally decided to add only Tempo to the model.
+
+### Problem 4
+
+Conduct a partial F-test to determine if the attributes not chosen by
+you in Problem-3 are significant to
+predict the energy.What are the null and alternate hypotheses?
+
+```{r}
+anova(model1,model2)
+```
+
+The very small value of p (\<0.05) indicates that we need to reject the
+null hypothesis.
+
+**Null Hypothesis:** Removed features are 0, full model is not better.
+
+**Alternate Hypothesis:** Not all removed features are 0, full model is
+better.
+
+### Problem 5
+
+AIC - Akaike Information Criterion is used to compare different models
+and determine the best fit for the
+data. The best-fit model according to AIC is the one that explains
+greatest amount of variation using the
+fewest number of attributes.
+Build a model based on AIC using Stepwise AIC regression.Elucidate your
+observations from the new model.
+
+```{r}
+#Problem 5
+
+model3 = lm(energy ~ ., data = df)
+ols_step_both_aic(model3)
+
+#creating a model based on the features returned by AIC
+modelp5 = lm(energy ~ loudness+acousticness+danceability+valence+instrumentalness+mode+key , data=df)
+summary(modelp5)
+```
+
+Note: model 3 was used to check for all features that were returned by
+"ols_step_both_aic function".
+
+We observe that on creating a model based on the function, we were able
+to obtain a significantly higher R squared and Adjusted r squared
+values. In fact the Adjusted r squared value was higher that the one of
+model1! Thus AIC helps build a model that fits really well.
+
+### Problem 6
+
+Plot the residuals of the models built till now and comment on it
+satisfying the assumptions of MLR.
+
+```{r}
+res1<-resid(model1)
+plot(fitted(model1), res1)
+abline(0, 0)
+#Since the graph is curved, it is not the right model for data
+res2<-resid(model2)
+plot(fitted(model2), res2)
+abline(0, 0)
+#Since the graph is curved, it is not the right model for data
+res3<-resid(modelp5)
+plot(fitted(modelp5), res3)
+abline(0, 0)
+```
+
+We see that in all the plots there is not much of a pattern we can see
+i.e, the model follows homoscedasticity. Thus, it satisfies the residual
+analysis and hence satisfies the assumptions that residuals follow
+normal distribution and conditional expected values(mean) of residuals
+is zero.
+
+### Problem 7
+
+For the model built in Problem-2 , determine the presence of
+multicollinearity using VIF. Determine if
+there are outliers in the data using Cook\'s Distance. If you find any ,
+remove the outliers and fit the model
+for Problem-2 and see if the fit improves.
+
+```{r}
+#Problem 7
+#VIF: Used to find multicollinearity
+vif(model2)
+
+#Cook's distance
+rows<-nrow(df)
+ols_plot_cooksd_bar(model2)
+cooksdistance<-cooks.distance(model2)
+# cooksdistance
+count<-0
+for(i in 1:nrow(df)){
+  if(cooksdistance[i]>(4/rows)){
+    count<-count+1#outliers
+  }
+}
+
+#To remove all outliers
+cd<-as.numeric(names(sort(cooksdistance, decreasing= TRUE)[1:count]))
+newdf<-df[-cd,]#creating a new df without any outliers
+#nrow(newdf)
+newmodel2 = lm( energy ~loudness+acousticness+tempo, data=newdf)
+summary(newmodel2)
+```

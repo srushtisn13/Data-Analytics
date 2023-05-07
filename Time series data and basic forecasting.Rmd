@@ -1,0 +1,175 @@
+---
+title: "PES University, Bangalore"
+subtitle: "Established under Karnataka Act No. 16 of 2013"
+author:
+- 'SRUSHTI S N, Dept. of CSE - PES2UG20CS352'
+output: pdf_document
+urlcolor: blue
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## Time Series Data and Basic Forecasting Techniques
+
+### Loading Dataset and Packages
+
+```{r}
+library(tidyverse)
+library(fpp2)
+df <- read.csv('sales.csv')
+head(df)
+```
+
+Pick out the Sales column in the data.frame. Most of our time-series
+analysis will be done on this column.
+
+```{r}
+sales <- df$Sales
+head(sales)
+```
+
+The ts function is used to create the ts object in R. Frequency is 52 as
+it is weekly data. The start is specified like start= c(y, m, d) as we
+are dealing with weekly data.
+
+```{r}
+sales_ts <- ts(sales, frequency = 52, start=c(2010, 2, 5))
+sales_ts
+
+```
+
+Visualize the Time-Series of Sales column
+
+```{r}
+plot.ts(sales_ts)
+
+```
+
+#### Problem 1
+
+Decompose the Sales column into trend, seasonal and random components.
+Plot these components as well
+
+```{r}
+decomp<-decompose(sales_ts)  
+plot(decomp)
+```
+
+#### Problem 2
+
+• Perform forecasts using Single, Double and Triple Exponential
+Smoothing.
+
+• Plot the forecasts of all three forecasts (different colours) against
+the true values. (Hint: use lines)
+• Use only one function needed for all 3 forecasts, only changing
+parameters to get each of the 3 models (Hint: Think about alternate
+names)
+
+```{r}
+#Creating training data and testing data
+sales_train<-window(sales_ts,end=c(2020,40))
+sales_test<-window(sales_ts,start=c(2011,2))
+
+```
+
+```{r}
+#Simple Exponential Smoothing
+#alpha=0.2 is where the model works best
+simple<- forecast(ses(sales_train,alpha=0.2,h=100))
+autoplot(simple)
+```
+
+```{r}
+#Double Exponential Smoothing
+#Use Holt's method
+holt_double<-forecast(holt(sales_train, h=100))
+autoplot(holt_double)
+```
+
+```{r}
+#Triple Exponential Smoothing
+hw_triple<-HoltWinters(sales_ts,alpha=0.2, beta=0.5, gamma=0.8, seasonal = "additive")
+plot(hw_triple)
+triple<-forecast(hw_triple)
+plot(triple)
+```
+
+#### 
+Problem 3
+
+• Forecast Sales values by Regression using all other columns. Print
+summary of regression model.
+• Plot the predicted values against original as well. (Hint: Regression
+model predictions will not be a Time Series, so need to get both to
+common index/x-axis)
+
+```{r}
+model<- lm(sales ~ (Holiday_Flag + Unemployment + Laptop_Demand + Temperature + Fuel_Price + CPI),data = df)
+pred = predict(model)
+summary(model)
+plot(pred)
+plot(predict(pred),df$Sales,ylab="Observed",xlab="Predicted")
+abline(0,1)
+```
+
+#### Problem 4
+
+Plot the Laptop_Demand column as a time series. Identify the forecasting
+required for this type of Time-series,and forecast the values for all
+143 weeks (Hint: Look at functions in the forecast package)
+
+```{r}
+#Holt winter's method
+demand<- ts(df$Laptop_Demand, frequency = 23, start=c(2010, 2, 5))
+#plot.ts(demand)
+demand_holt <- HoltWinters(demand)
+plot(demand, ylab="laptop_sales", xlim=c(2010,2013))
+lines(demand_holt$fitted[,1])
+```
+
+We can see from above graph how the actual and smoothed model DO NOT fit
+together well. Thus using regression is not a good idea.
+
+#### Problem 5
+
+Evaluate the accuracy of all 3 Exponential Smoothing models (from
+Problem 2) and Regression models using the MAPE and RMSE metrics.
+Comment on which is the best Exponential Smoothing method, and if
+Regression is better than Exponential Smoothing? Provide a reasoning for
+why the best model is better suited for the Sales data (Bonus Point:
+reasoning for why the 2 other models perform similarly)
+
+```{r}
+#finding accuracy
+cat("Simple")
+simple_acc<-accuracy(simple)
+simple_acc
+
+cat("Double")
+double_acc<-accuracy(holt_double)
+double_acc
+
+
+cat("Triple")
+triple_acc<-accuracy(forecast(triple))
+triple_acc
+
+cat("Regression model")
+model_acc<-accuracy(model)
+model
+```
+
+We see from the above results that the errors are the least in case of
+Triple Exponential Smoothing.Hence, it is the best suitable method and
+no, regression is not better than Exponential Smoothing.
+
+Triple Exponential Smoothing involves 3 equations and thus can handle
+seasonality and trend which contribute to the reasoning as why Triple
+exponential smoothing is the best method.
+
+Bonus: Simple exponential smoothing behaves similar to Triple
+Exponential Smoothing but it cannot handle seasonality or trend.
+And , Double exponential smoothing behaves similar to Triple Exponential
+Smoothing, including handling trend but not seasonality.

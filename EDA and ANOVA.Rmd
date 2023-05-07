@@ -1,0 +1,394 @@
+---
+title: "PES University, Bangalore"
+subtitle: "Established under Karnataka Act No. 16 of 2013"
+author:
+- 'SRUSHTI S N, Dept. of CSE - PES2UG20CS352'
+output: pdf_document
+urlcolor: blue
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## Part I. Exploratory Data Analysis with R
+
+### Loading dataset and inserting libraries
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+cbc_df <- read_csv("CharlesBookClubDataset.csv")
+#NOTE: IF YOU ARE RUNNING ANY ONE SECTION OF CODE MORE THAN ONCE PLEASE RUN THIS CHUNK OF CODE AGAIN AND THEN RUN THE SECTION YOU WANTED TO(this is because the changes made to any column will be saved so if you run a section again without clearing objects it will display solution w.r.t changes already made)
+```
+
+### Problem 1
+
+Generate an understanding of the dataset via a summary of its features.
+Find the count, missing count,minimum, 1st quartile, median, mean, 3rd
+quartile, max and standard deviation of all relevant columns.
+Separately, print the total number of missing values in each column.
+
+```{r}
+#to find mode
+Mode <- function(x, na.rm=FALSE) {
+  if(na.rm)
+  { 
+    #if na.rm is false it means no need to remove NA values
+    #but if its true then we move to the next non NA value in the column
+    x = x[!is.na(x)]
+  }
+    ux <- unique(x)
+    ux[which.max(tabulate(match(x, ux)))]
+}
+
+#fucntion that finds and prints summary statistics, missing count and count for each column
+Summary<-function(x){
+  
+     print(paste('Mean:', mean(x, na.rm=TRUE)))
+     print(paste('Median:', median(x, na.rm=TRUE)))
+     print(paste('Mode:', Mode(x, na.rm=TRUE)))
+     print(paste('Minimum:', min(x, na.rm=TRUE)))
+     print(paste('Maximum:', max(x, na.rm=TRUE)))
+     print(paste('1st quartile:', quantile(x,0.25, na.rm=TRUE)))
+     print(paste('3rd quartile:', quantile(x,0.75, na.rm=TRUE)))
+     print(paste('Standard deviation:', sd(x, na.rm=TRUE)))
+     print(paste('Missing count:', sum(is.na(x))))
+     print(paste('Count:', length(x)))
+     
+}
+
+Summary(cbc_df$'M')
+cat("\n")
+Summary(cbc_df$'F')
+cat("\n")
+Summary(cbc_df$'R')
+
+cat("\n")
+
+#to print missing values for each column
+print(sum(is.na(cbc_df)))
+
+```
+
+### Problem 2
+
+Replace missing values within the Recency, Frequency, and Monetary
+features with suitable values. Explain your reasoning behind the method
+of substitution used. Hint: Try plotting the distribution of the values
+in each feature using the hist function. Think about how to best deal
+with data imputation. Also, plot the distribution of feature values
+after imputation.
+
+```{r}
+#Problem 2
+#NOTE: IF THE HISTOGRAM BEFORE AND AFTER REPLACING ARE THE SAME THEN PLEASE  RUN THE 1ST SECTION OF CODE IN THIS FILE(before problem 1) AND THEN RUN THIS SECTION AGAIN
+
+Mode <- function(x, na.rm=FALSE) {
+  if(na.rm)
+  { 
+    #if na.rm is false it means no need to remove NA values
+    #but if its true then we move to the next non NA value in the column
+    x = x[!is.na(x)]
+  }
+    ux <- unique(x)
+    ux[which.max(tabulate(match(x, ux)))]
+}
+
+#histogram is used to find the right way to fill missing data
+hist(cbc_df$'M', breaks=18, main="Monetary") 
+hist(cbc_df$'R', breaks=18, main="Recency") 
+hist(cbc_df$'F', breaks=18, main="Frequency")
+
+#Replacing missing values with Mode since the data is positively skewed
+cbc_df$'M'[is.na(cbc_df$'M')] <- Mode(cbc_df$'M', na.rm = TRUE)
+cbc_df$'R'[is.na(cbc_df$'R')] <- Mode(cbc_df$'R', na.rm = TRUE)
+cbc_df$'F'[is.na(cbc_df$'F')] <- Mode(cbc_df$'F', na.rm = TRUE)
+
+
+#plotting histogram after replacing missing values
+
+
+hist(cbc_df$'M', breaks =18, main="Monetary after filling missing values")
+hist(cbc_df$'R', breaks=18, main="Recency after filling missing values")
+hist(cbc_df$'F', breaks=18, main="Frequency after filling missing values")
+```
+
+**Reason:** Since the plot is positively skewed, we replace missing
+values with mode.
+
+### Problem 3
+
+Discretize the continuous values of Monetary, Recency, and Frequency
+into appropriate bins, and create three new columns Mcode, Rcode and
+Fcode respectively, for the discretized values. Explicitly mention the
+number of bins used and explain the choice for the bin size. Print out
+the summary of the newly created columns. Hint: Use the cut function to
+break on preset breakpoints. What are the most optimum breakpoints you
+can choose? Try to think of a statistical function that provides these
+breakpoints for optimum binning.
+
+```{r}
+#problem 3
+
+cbc_df <- cbc_df %>% mutate(Rcode=cut(cbc_df$R,breaks=unique(quantile(cbc_df$R,
+probs=seq.int(0,1,by=1/4))),include.lowest=TRUE),Mcode=cut(cbc_df$M,breaks=unique(quantile(cbc_df$M,probs=seq.int(0,1,by=1/5))),include.lowest=TRUE),
+Fcode=cut(cbc_df$F,breaks=unique(quantile(cbc_df$F,probs=seq.int(0,1,by=1/4))),
+include.lowest=TRUE))
+
+# Set the level strings
+levels(cbc_df$Mcode) <- c('15-112', '112-181', '181-242', '242-296', '296-479')
+
+levels(cbc_df$Rcode) <- c('2-8', '8-14', '14-16', '16-36')
+
+levels(cbc_df$Fcode) <- c('1-2', '2-6', '6-12')
+
+summary(cbc_df$'Mcode')
+cat("\n")
+summary(cbc_df$'Fcode')
+cat("\n")
+summary(cbc_df$'Rcode')
+
+
+```
+
+**Solution:** Bin size taken is 18 .Since this a large dataset, it would
+be better to use bin size around 20.
+
+### Problem 4
+
+The marketing team heavily relies on the RFM variables of the recency of
+last purchase, total number of purchases, and total money spent on
+purchases to gauge the health of the members of the book club. Increases
+in either the frequency of purchases or monetary spend and decreases in
+time since last purchase across the customer base, will intuitively lead
+to more sales for the business.
+
+#### Problem 4.1
+
+Create and visualize histograms for the discretized, Recency, Frequency,
+Monetary features. Also create one for the FirstPurch feature.
+
+**Solution:** Since histogram can't be plotted for non discrete values,
+we shall use bar graph instead.
+
+```{r}
+#Problem 4
+#Problem 4.1
+ggplot(cbc_df, aes(x = Rcode)) + geom_bar() + coord_flip () + labs(x = "Recency")
+
+ggplot(cbc_df, aes(x = Mcode)) + geom_bar() + coord_flip () + labs(x = "Monetary")
+
+ggplot(cbc_df, aes(x = Fcode)) + geom_bar() + coord_flip () + labs(x = "Frequency")
+
+ggplot(cbc_df, aes(x = FirstPurch)) + geom_bar() + coord_flip () + labs(x = "First Purchase")
+```
+
+#### Problem 4.2
+
+Transform the Florence variable into a categorical feature that can take
+up
+the values True or False. Create and visualize horizontal box plots for
+the original Recency, Frequence,
+Monetary and FirstPurch features against the Florence variable. Hint: To
+transform Florence, use the
+concept of factors in R and set the labels True and False
+
+```{r}
+#Problem 4.2
+#Transforming "Florence"
+cbc_df$Florence<-factor(cbc_df$Florence, labels=c("false", "true"))
+#levels(cbc_df$Florence)
+#cbc_df$Florence
+
+#creating box plots
+boxplot(cbc_df$M~cbc_df$Florence, xlab= "Customer purchased ‘Art History of Florence'", ylab= "Total money spent on Books",main="If customer purchased the book")
+
+boxplot(cbc_df$R~cbc_df$Florence, xlab= "Customer purchased ‘Art History of Florence'", ylab= "Months since last purchase",main="If customer purchased the book")
+
+boxplot(cbc_df$'F'~cbc_df$Florence, xlab= "Customer purchased ‘Art History of Florence'", ylab= "Total number of purchases",main="If customer purchased the book")
+
+```
+
+#### Problem 4.3
+
+Create and visualize a density plot for Recency, Frequency, Monetary and
+FirstPurch features.
+
+```{r}
+#Problem 4.3
+densM<- density(cbc_df$M)
+plot(densM,main="Density plot for Monetary")
+
+densR<- density(cbc_df$R)
+plot(densR,main="Density plot for Recency")
+
+densF<- density(cbc_df$'F')
+plot(densF,main="Density plot for Frequency")
+
+densfirst<- density(cbc_df$FirstPurch)
+plot(densfirst,main="Density plot for First Purchase")
+```
+
+## Part II. ANOVA
+
+### Problem 1
+
+Captain Holt provided a file containing the names of a few People of
+Interest and the number of items
+logged at various evidence lockers of various precincts pertaining to
+them. He also instructs Peralta and Diaz
+to look into the file as he was told it should contain more information.
+Scully decided to use ANOVA.
+For this problem, use the data file named Scenario 1.csv in the data
+repository. Load the following libraries before moving on and read the
+dataset,
+
+```{r}
+library(ggpubr)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(broom)
+library(car)
+dfscen1 <- read.csv('Scenario 1.csv') #Load the Dataset
+#NOTE: IF YOU ARE RUNNING ANY ONE SECTION OF CODE MORE THAN ONCE PLEASE RUN THIS CHUNK OF CODE AGAIN AND THEN RUN THE SECTION YOU WANTED TO(this is because the changes made to any column will be saved so if you run a section again without clearing objects it will display solution w.r.t changes already made)
+
+```
+
+1\. Consider the dataset. Which type of ANOVA can Scully use? (Justify
+why the particular test)
+2. What function(s) could have been used by Scully for ANOVA if he uses
+the R programming language?
+3. What does the output of this/these functions tell Scully? (Specify
+hypotheses and what each column in the summary of the output means
+considering 5% significance)
+
+```{r}
+
+ano1 <-aov(dfscen1$No.of.items ~ dfscen1$POI, data = dfscen1)
+summary(ano1)
+```
+
+**Solution:**
+
+1.  Scully should use one way anova test because they need to check if
+    the one of the columns in the dataset depends on the other.
+2.  Scully should use "aov()"
+3.  Since the value of p is 0.393\<0.5, there is no relation between the
+    two columns.
+
+### Problem 2
+
+Peralta and Diaz find a member of the family, a certain Frank
+Pentangeli, through Doug Judy. They discovered that the famiglia had
+altered this file resulting in invalid results. The original file was
+then recovered by the squad and was sent to Scully and Hitchcock for
+analysis. To their surprise they discovered that the file also had
+additional column of which gives the priority.
+The dataset has three columns:
+• First column has the Person of Interest(POI) in the Mafia
+• Second column has the number of evidence items collected in particular
+evidence locker (evidence
+lockers are present across the city and many precincts have multiple
+squads working on the mafia, so
+one POI has multiple entries).
+• Third column gives the Priority given to collect the evidence by a
+particular squad with respect to a
+POI.
+
+#### Loading dataset: Scenario2.csv
+
+```{r}
+library(ggpubr)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(broom)
+library(car)
+
+#NOTE: IF YOU ARE RUNNING ANY ONE SECTION OF CODE MORE THAN ONCE PLEASE RUN THIS CHUNK OF CODE AGAIN AND THEN RUN THE SECTION YOU WANTED TO(this is because the changes made to any column will be saved so if you run a section again without clearing objects it will display solution w.r.t changes already made)
+
+dfscen2 <- read.csv('Scenario 2.csv') #Load the Dataset
+```
+
+1\. Consider the data. Which type of ANOVA can Scully use? (Justify why
+the particular test)
+2. What function(s) could have been used by Scully for the ANOVA if he
+uses the R programming
+language?
+3. What does the output of this/these functions tell Scully? (Specify
+hypotheses and what each column in the summary of the output means
+considering 5% significance)
+4. Hitchcock thinks that Scully has missed a task which completes the
+ANOVA test. What should Scully have thought of? Hint: Philosophically, a
+hypothesis is a proposition made as a basis for reasoning, without any
+assumption of its truth.
+
+```{r}
+
+ano2 <-aov(dfscen2$No.of.items ~ dfscen2$POI+dfscen2$Priority, data = dfscen2)
+summary(ano2)
+```
+
+1.  Since there are two independent column and want to know how they
+    affect the third dependent column Scully should use a 2 way ANOVA
+    test
+2.  Scully should use "aov()"
+
+```{r}
+
+ano2 <-aov(dfscen2$No.of.items ~ dfscen2$POI*dfscen2$Priority, data = dfscen2)
+summary(ano2)
+```
+
+3.  Description of each column. Hypotheses of Two way ANOVA test.
+    • When value of p\< 0.05 there might be a relation between POI and
+    average number of evidence collected against them.
+    • When value of p\< 0.05 there might be a relation between the
+    Priority and the average number of evidence collected against them.
+    • Categorical variables cannot be compared with F Statistic and can
+    only be ensured to be independent variables by experimental design.
+
+    -\>Value of p \> 0.05 hence there is no interaction between the
+    Priority and person of Interest.
+
+4.  The assumptions made are:
+    • Normal distribution dependent variable
+
+    • Homogeneity of variance
+    • Independence of observations
+
+### Problem 3
+
+```{r}
+
+ano2 <-aov(dfscen2$No.of.items ~ dfscen2$POI +dfscen2$Priority, data = dfscen2)
+tukey_ano2<-TukeyHSD(ano2)
+
+tukey_ano2
+```
+
+Plot graph:
+
+```{r}
+par(mar=c(5,8,4,1)+.1)
+tukey.plot.test<-TukeyHSD(aov(formula = No.of.items ~ factor(POI), data = dfscen2))
+plot(tukey.plot.test, las = 1)
+
+par(mar=c(5,8,4,1)+.1)
+tukey.plot.test<-TukeyHSD(aov(formula = No.of.items ~ Priority, data = dfscen2))
+plot(tukey.plot.test, las = 1)
+```
+
+**Solution:** Any group which doesn\'t contain 0 in the confidence
+interval.
+Here it can be seen that critical priority has a different mean compared
+to the other classes. This says that
+having a critical Priority assigned to working on the cases generate
+different no of evidence items compared
+to the rest of the priorities.
+Also it can been seen that there is no pairs of POI has a statistically
+significant difference in mean no of
+evidence generated. In other words, there is no difference in the
+average no of Evidence items discovered
+when compared with any two POI.

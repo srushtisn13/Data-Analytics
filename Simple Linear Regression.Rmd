@@ -1,0 +1,146 @@
+---
+title: "PES University, Bangalore"
+subtitle: "Established under Karnataka Act No. 16 of 2013"
+author:
+- 'SRUSHTI S N, Dept. of CSE - PES2UG20CS352'
+output: pdf_document
+urlcolor: blue
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## 
+
+# **Worksheet 2a - Simple Linear Regression**
+
+### Loading dataset and inserting libraries
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library()
+#library(dplyr)
+
+df<- read.csv("dragon_neurons.csv")
+```
+
+### Problem 1
+
+```{r}
+#Problem 1
+#estimating using ordinary least square
+#finding slope and intercept
+#explanatory var: independent var
+slope <- cor(df$'axon_diameter', df$'conduction_velocity') * (sd(df$'conduction_velocity') /
+                                                                sd(df$'axon_diameter'))
+inter <- mean(df$'conduction_velocity') - (slope * mean(df$'axon_diameter'))
+df %>%
+  ggplot(aes(x = sqrt(df$axon_diameter), y = sqrt(df$conduction_velocity))) +geom_point(colour
+                                          = "green")+geom_smooth(method = "lm", fill = NA)
+
+
+
+```
+
+Thus linear model is suitable for representing above relationship
+
+### Problem 2
+
+```{r}
+#Problem 2
+x<-sqrt(df$axon_diameter)
+y1<-sqrt(df$conduction_velocity)
+df$conduction_velocity2 <- df$conduction_velocity * df$conduction_velocity
+y2<-df$conduction_velocity2
+
+model1<-lm(y1~x)
+resi<-resid(model1)
+qqnorm(resi)
+qqline(resi)
+
+
+model2<-lm(y2~x)
+residu<-resid(model2)
+qqnorm(residu)
+qqline(residu)
+
+```
+
+No, the residuals don't look like white noise. Hence, we transform y by
+taking square of it
+
+### Problem 3
+
+```{r}
+#problem3
+dataa<-df[c("axon_diameter","conduction_velocity2")]
+dataa.center  = colMeans(dataa)
+dataa.cov     = cov(dataa)
+
+# Ellipse radius from Chi-Sqaure distrubiton
+rad  = qchisq(p = 0.95 , df = 2)
+
+# Square root of Chi-Square value
+rad  = sqrt(rad)
+
+# Finding ellipse coordiantes
+ellipse <- car::ellipse(center = dataa.center , shape = dataa.cov , radius = rad,segments =
+                          150 , draw = FALSE)
+library(ggplot2)
+
+# Ellipse coordinates names should be same with air data set
+ellipse <- as.data.frame(ellipse)
+colnames(ellipse) <- colnames(dataa)
+
+# Create scatter Plot
+figure <- ggplot(dataa , aes(x = axon_diameter , y = conduction_velocity2)) +
+       geom_point(size = 2) +
+       geom_polygon(data = ellipse , fill = "orange" , color = "orange" , alpha = 0.5)+
+       geom_point(aes(dataa.center[1] , dataa.center[2]) , size = 5 , color = "blue") +
+       geom_text( aes(label = row.names(dataa)) , hjust = 1 , vjust = -1.5 ,size = 2.5 ) +
+       ylab("conduction_velocity2 Values") + xlab("axon_diameter Values")
+       
+# Run and display plot
+figure
+```
+
+```{r}
+distances <- mahalanobis(x = dataa , center = dataa.center , cov = dataa.cov)
+# Cutoff value for ditances from Chi-Sqaure Dist. 
+# with p = 0.95 df = 2 which in ncol(air)
+cutoff <- qchisq(p = 0.95 , df = 2)
+
+## Display observation whose distance greater than cutoff value
+dataa[distances > cutoff ,]
+```
+
+From the plot above and the data, we can conclude that there are no
+outliers.
+
+### Problem 4
+
+```{r}
+#problem4
+summary(model1)
+```
+
+Multiple R-squared: 0.8152, Adjusted R-squared: 0.8123. functional form
+linear model
+
+```{r}
+summary(model2)
+```
+
+Multiple R-squared: 0.7823, Adjusted R-squared: 0.779. Higher value of R
+2 implies better fit
+
+### Problem 5
+
+```{r}
+summary(model2)
+```
+
+As we can see that p value is lesser, it is a statically significant
+relationship which implies positive relationship between the columns
+"axon_diameters" and "conduction_velocity".

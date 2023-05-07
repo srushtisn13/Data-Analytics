@@ -1,0 +1,175 @@
+---
+title: "PES University, Bangalore"
+subtitle: "Established under Karnataka Act No. 16 of 2013"
+author:
+- 'SRUSHTI S N, Dept. of CSE - PES2UG20CS352'
+output: pdf_document
+urlcolor: blue
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## Worksheet 2c : Logistic Regression
+
+### Loading the dataset
+
+```{r}
+library(tidyverse)
+library(InformationValue)
+library(ROCR)
+df <- read.csv('got_characters.csv')
+```
+
+### Problem 1
+
+How many characters from the SoIaF world does this dataset contain
+information on? Calculate the percentage
+of missing data for each column of the dataset and print them out in
+descending order as a dataframe.
+
+```{r}
+noofchars<- length(df$name)
+print(noofchars)
+
+df<-replace(df,df=="", NA)
+missingvals<-is.na(df)
+sort(((colMeans(missingvals))*100), decreasing=TRUE)
+
+```
+
+### Problem 2
+
+#### Step 1
+
+```{r}
+#Step 1
+
+df2 <- subset(df,select = -c(book1,isAliveSpouse,boolDeadRelations,numDeadRelations,isPopular,father,heir,mother,spouse,isAliveHeir,isAliveMother,isAliveFather,isMarried))
+#df2
+sort(((colMeans(is.na(df2)))*100),decreasing = TRUE)
+```
+
+We see that a large proportion of the columns: **mother, isAlivemother,
+heir, isAliveheir, father, isAlivefather, spouse, isAlivespouse,
+dateofBirth, age, culture, title, house** have a lot of missing data.
+
+Due to the huge amount of missing data, dropping columns would lead to
+loss of lot of data. Thus we must replace missing data with -1 (as per
+the Hint).
+
+Thus we remove columns with only huge amounts of missing data
+
+#### Step 2
+
+```{r}
+#Step 2 
+
+#Replacing categorical variables with
+#use unclass to convert values to numeric
+df2[,c("culture","title","house")] <- lapply(df2[, c("culture","title","house")], as.factor)
+df2[,c("culture","title","house")] <- sapply(df2[, c("culture","title","house")], unclass)
+#df2
+#replacing NA with -1
+df2$title[is.na(df2$title)] = -1
+df2$culture[is.na(df2$culture)] = -1
+df2$house[is.na(df2$house)] = -1
+
+#replacing missing values with mean for numerical data
+df2$dateOfBirth[is.na(df2$dateOfBirth)] <- mean(df2$dateOfBirth, na.rm = TRUE)
+df2$age[is.na(df2$age)] <- mean(df2$age, na.rm = TRUE)
+
+#sum(is.na(df2))
+```
+
+#### Bonus
+
+```{r}
+#Bonus
+
+ggplot(df2, aes(x=age)) + geom_bar()
+#mean(df2$age)
+```
+
+Yes. The discrepancy is due to replacing the missing value with mean of
+age.
+
+### Problem 3
+
+#### Step 1
+
+```{r}
+#Step 1
+table(df2$actual)/length(df2$actual)
+```
+
+We observe that the data is more biased towards 1 i.e, towards positive
+values.
+
+#### Step 2
+
+```{r}
+#Step 1
+
+#storing all zeros and ones
+one <- df2[which(df2$actual == 1), ]
+zero <- df2[which(df2$actual == 0), ]
+
+
+trainone <- one[sample(1: nrow(one), .7*nrow(zero)),]
+trainzero <- zero[sample(1: nrow(zero), .7*nrow(zero)),]
+
+trainData <- rbind(trainone, zero)
+trainData <- trainData[sample(1: nrow(trainData)),]
+
+#use part of the sample that wasn't used for training for testing
+testone <- one[-sample(1:nrow(one), .7*nrow(zero)), ]
+testzero <- zero[-sample(1: nrow(zero), .7*nrow(zero)),]
+
+testData <- rbind(testone, testzero)
+testData <- testData[sample(1:  nrow(testData)),]
+
+table(trainData$actual)
+table(testData$actual)
+```
+
+### Problem 4
+
+#### Step 1
+
+```{r}
+#Step 1
+model4 <- glm(actual ~ age + popularity + culture + book5 + male + isNoble, family = binomial(link="logit"), data=trainData)
+summary(model4)
+
+#prediction for testData
+plogis(predict(model4, testData))
+```
+
+#### Step 2
+
+```{r}
+#step 2
+pred_test <- predict(model4,testData,type="response")
+ROCR_pred<- prediction(pred_test,testData$actual)
+performance_test <- performance(ROCR_pred,'tpr','fpr')
+plot(performance_test,print.cutoffs.at=seq(0.1,by=0.1))
+```
+
+```{r}
+#Step 2
+cost_performance = performance(ROCR_pred, "cost") 
+ROCR_pred@cutoffs[[1]][which.min(cost_performance@y.values[[1]])]
+```
+
+### Problem 5
+
+```{r}
+
+misClassError(testData$actual, pred_test)
+sensitivity(testData$actual, pred_test)
+specificity(testData$actual, pred_test)
+table(Actualvalue=testData$actual,Predictedvalue=pred_test>0.1111903)
+
+plotROC(testData$actual, pred_test)
+```

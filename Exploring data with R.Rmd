@@ -1,0 +1,243 @@
+---
+title: "PES University, Bangalore"
+subtitle: "Established under Karnataka Act No. 16 of 2013"
+author:
+- 'SRUSHTI S N, Dept. of CSE - PES2UG20CS352'
+output: pdf_document
+urlcolor: blue
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+### Converting Numerical data of type char to double
+
+The numerical data columns are of the type 'char'. And the values are of
+the form "xxxM" and "xxxK". So we need to extract the Ms and Ks then
+replace them with "", convert the data types to "double" and store the
+modified data in new columns (we don't want to modify existing columns
+because they might need to be used or other analysis)
+
+```{r}
+#loading the data
+library(tidyverse)
+df<-read_csv("worksheet/top_1000_instagrammers.csv")
+
+#Function to separate M and K from numbers and convert the data type from character to double
+sepMK<-function(column)
+{
+  for(i in 1:length(column))
+  {
+    len<-nchar(column[i])
+    subst<-substring(column[i],len,len)
+    
+    if(subst=="M"){
+      
+      new<-str_replace(column[i],"M","")
+      new<-as.double(new)
+      new<-new*1000000
+      column[i]<-new
+      
+    }else if(subst=="K"){
+      
+      new<-str_replace(column[i],"K","")
+      new<-as.double(new)
+      new<-new*1000
+      column[i]<-new
+      
+    }else if(subst==0){
+      
+      new<-0
+      column[i]<-0
+      
+    }
+  }
+  return(as.double(column))#return the data column as double datatype
+}#end of function
+
+#creating a new column to store the modified data
+df$'Authentic_Engagement_num'<-sepMK(df$'Authentic Engagement')
+df$'Followers_num'<-sepMK(df$'Followers')
+df$'Engagement_Avg_num'<-sepMK(df$'Engagement Avg.')
+```
+
+### Problem 1
+
+Get the summary statistics (mean, median, mode, min, max, 1st quartile,
+3rd quartile and standard deviation) for the dataset. Calculate these
+only for the numerical columns [Audience Country, Authentic Engagement
+and Engagement Average]. What can you determine from the summary
+statistics? How does your Instagram stats hold up with the top 1000 :P ?
+
+**Solution:**
+
+```{r}
+
+#Function to find mode
+Mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+#Finding the summary statistics of:
+#1.Followers
+min(df$'Followers_num')
+max(df$'Followers_num')
+mean(df$'Followers_num')
+median(df$'Followers_num')
+Mode(df$'Followers_num')
+quantile(df$'Followers_num',0.25)#1st quartile
+quantile(df$'Followers_num',0.75)#3rd quartile
+sd(df$'Followers_num')
+
+#2.Authentic Engagement
+min(df$'Authentic_Engagement_num')
+max(df$'Authentic_Engagement_num')
+mean(df$'Authentic_Engagement_num')
+median(df$'Authentic_Engagement_num')
+Mode(df$'Authentic_Engagement_num')
+quantile(df$'Authentic_Engagement_num',0.25)#1st quartile
+quantile(df$'Authentic_Engagement_num',0.75)#3rd quartile
+sd(df$'Authentic_Engagement_num')
+
+#3.Engagement Average
+min(df$'Engagement_Avg_num')
+max(df$'Engagement_Avg_num')
+mean(df$'Engagement_Avg_num')
+median(df$'Engagement_Avg_num')
+Mode(df$'Engagement_Avg_num')
+quantile(df$'Engagement_Avg_num',0.25)#1st quartile
+quantile(df$'Engagement_Avg_num',0.75)#3rd quartile
+sd(df$'Engagement_Avg_num')
+
+#end of summary statistics
+
+
+```
+
+![](images/p1s1-01.png)
+
+![](images/p1s2-01.png)
+
+We can see that the standard deviation is greater than mean in all the
+cases.This means that there is high variation between values and thus
+the data is scattered. Thus mean is not a good option to describe the
+data. In case of "Followers","Authentic Engagement" and "Engagement
+Average", mean\>median, which implies that the data is likely
+rightly-skewed for them. The mode, 1st percentile and 3rd percentile are
+as seen above. I'm not an influencer on Instagram and since I don't make
+any posts(and my account is private), I think there is no engagement on
+my account :P . But I do think that in case of a private account, the
+maximum engagement would be less than or equal to the number of
+followers of that account.
+
+### Problem 2
+
+Create a histogram where the x-axis contains the Audience Country and
+y-axis contains the total follower count of all users in that country.
+Which country has the most amount of followers? (Hint) Use a dictionary
+to maintain the sum of followers across countries. What is the total for
+India and what rank does it fall compared to other countries?
+
+**Solution:**
+
+```{r}
+
+#Problem2
+#Plotting an 'Audience Country vs Follower count' Bar Graph
+#PLEASE NOTE THAT THE FOLLOWER COUNT IS THE SUM OF FOLLOWERS CORRESPONDING TO THE COUNTRY
+
+country<-df$'Audience Country'
+country<-country[!is.na(country)]
+xaxis<-unique(country)
+print(xaxis)#to check if all the unique elements are stored in the variable 'xaxis'
+
+#Function to find the sum of all followers corresponding to a country and storing them in a vector
+folsum<-function(countr,xaxis,datfolnew){ 
+  #'xaxis' contains all the unique country names
+  #'countr' is a vector containing the country names with repetition
+  #'datfol' is a vector containing the all the corresponding followers
+  
+  y<-c()
+  for(i in 1:length(xaxis)){
+    s<-0
+    for(j in 1:length(countr)){
+      if((xaxis[i] == countr[j])){
+        s<-s+datfolnew[j]
+      }
+    }
+    y[i]<-s
+  }
+  return(y)
+}
+#Storing the return value in a variable 'yaxis'
+yaxis<-folsum(country,xaxis,df$'Followers_num')
+
+print(yaxis)
+
+#Plotting the graph using barplot()
+barplot(yaxis,names.arg=xaxis,las = 2,
+        cex.names = 0.7,xlab="Audience Country",ylab="Follower Count",main="Bar Graph: 'Audience Country vs Follower Count' ")
+```
+
+![](images/p2s1.png)
+
+![](images/p2s3.png)
+
+![](images/p2s2-01.png)
+
+It can be seen from the graph that United States has the highest
+follower count with India being the next. From the picture above the
+graph, we see that India is at the second rank with a total of
+5876500000 follower count.
+
+### Problem 3
+
+Create a horizontal box plot using the column [Authentic Engagement].
+What inferences can you make from this box and whisker plot?
+
+**Solution:**
+
+```{r}
+
+#Problem 3
+#Plotting a horizontal box plot
+x<-df$'Authentic_Engagement_num'
+boxplot(x,horizontal=TRUE,xlab="Authentic Engagement",main="Box Plot")
+```
+
+![](images/p3s1.png)
+
+![](images/p3s2-01.png)
+
+It can be inferred from the box plot above that the data is skewed
+(since the line inside the box(the median) is not in the center). We can
+also see that there are a lot of outliers. But this is not surprising
+considering the fact that our data is a highly scattered one. We can
+also infer that a lot of influencers have less engagement(even 0)
+despite large following. The large following could be because of Fake
+engagement concept in Instagram one of the consequences of which is
+sudden rise in number of followers or spammed comments.
+
+## Conclusion
+
+In a few short sentences, describe your Instagram profile (category,
+followers, estimated engagement). Compare your profile to the analysis
+done of the top 1000 profiles. If you were tasked to becoming an
+influencer, what would be the best way for you to increase your
+followers and user engagement?
+
+**Solution:**
+
+My instagram account has no category since its only for personal uses.
+Since I am not an influencer and my Instagram account is private
+(approx. 120 followers), the estimated engagement I think would be less
+than or equal to the number of followers I have.
+
+If I were tasked with becoming and influencer, I would post consistently
+because Instagram's algorithm ensures steady increase in followers and
+authentic engagement with regular posts, use captions that are are
+interactive so people interact in the comment section thereby increasing
+engagement. I would also connect and collaborate with other influencers
+which would have an added advantage of attracting the users that are
+interested in their account.
